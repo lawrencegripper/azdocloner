@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/bin/Debug/netcoreapp3.0/adoprloadbalancer.dll",
+            "program": "${workspaceFolder}/bin/Debug/netcoreapp3.0/azdocloner.dll",
             "envFile": "${workspaceFolder}/.env",
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",

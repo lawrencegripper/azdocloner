@@ -10,7 +10,7 @@ using LibGit2Sharp;
 using System.IO;
 using LibGit2Sharp.Handlers;
 
-namespace adoprloadbalancer
+namespace azdocloner
 {
     class Program
     {
@@ -69,49 +69,55 @@ namespace adoprloadbalancer
             foreach (var sourceRepo in sourceRepos)
             {
                 var destRepo = destReposDict[getDestNameFromSourceName(sourceRepo.Name)];
-
-                // Create a temp dir to store the cloned repo
-                var gitDir = Directory.CreateDirectory(Path.Join(tempDir.FullName, sourceRepo.Name));
-
-                var co = new CloneOptions();
-                CredentialsHandler sourceCredProvider = (_url, _user, _cred) => new UsernamePasswordCredentials { Username = pat1, Password = pat1 };
-                co.CredentialsProvider = sourceCredProvider;
-
-
-                Console.WriteLine($"Cloning source {sourceRepo.Name}");
-                Repository.Clone(sourceRepo.RemoteUrl, gitDir.FullName, co);
-
-                using (var repo = new Repository(gitDir.FullName))
+                if (dryRun)
                 {
-                    CredentialsHandler destCredProvider = (_url, _user, _cred) => new UsernamePasswordCredentials { Username = pat2, Password = pat2 };
-                    LibGit2Sharp.PushOptions options = new LibGit2Sharp.PushOptions();
-                    options.CredentialsProvider = destCredProvider;
+                    Console.WriteLine($"Would clone {sourceRepo.Name} @ {sourceRepo.WebUrl} and sync to {destRepo.Name} @ {destRepo.WebUrl}");
+                }
+                else
+                {
 
-                    if (!repo.Network.Remotes.Where(x => x.Name == "dest").Any())
+                    // Create a temp dir to store the cloned repo
+                    var gitDir = Directory.CreateDirectory(Path.Join(tempDir.FullName, sourceRepo.Name));
+
+                    var co = new CloneOptions();
+                    CredentialsHandler sourceCredProvider = (_url, _user, _cred) => new UsernamePasswordCredentials { Username = pat1, Password = pat1 };
+                    co.CredentialsProvider = sourceCredProvider;
+
+
+                    Console.WriteLine($"Cloning source {sourceRepo.Name}");
+                    Repository.Clone(sourceRepo.RemoteUrl, gitDir.FullName, co);
+
+                    using (var repo = new Repository(gitDir.FullName))
                     {
-                        repo.Network.Remotes.Add("dest", destRepo.RemoteUrl);
-                    }
-                    else
-                    {
-                        repo.Network.Remotes.Remove("dest");
-                        repo.Network.Remotes.Add("dest", destRepo.RemoteUrl);
-                    }
+                        CredentialsHandler destCredProvider = (_url, _user, _cred) => new UsernamePasswordCredentials { Username = pat2, Password = pat2 };
+                        LibGit2Sharp.PushOptions options = new LibGit2Sharp.PushOptions();
+                        options.CredentialsProvider = destCredProvider;
 
-                    var destRemote = repo.Network.Remotes["dest"];
-
-                    foreach (var branch in repo.Branches)
-                    {
-                        Console.WriteLine($"Pusing source {sourceRepo.Name}:{branch} to {destRepo.Name}:{branch} @ {destRepo.Url}");
-
-                        repo.Network.Push(destRemote, branch.CanonicalName, new PushOptions()
+                        if (!repo.Network.Remotes.Where(x => x.Name == "dest").Any())
                         {
-                            CredentialsProvider = destCredProvider
-                        });
-                    }
+                            repo.Network.Remotes.Add("dest", destRepo.RemoteUrl);
+                        }
+                        else
+                        {
+                            repo.Network.Remotes.Remove("dest");
+                            repo.Network.Remotes.Add("dest", destRepo.RemoteUrl);
+                        }
 
+                        var destRemote = repo.Network.Remotes["dest"];
+
+                        foreach (var branch in repo.Branches)
+                        {
+                            Console.WriteLine($"Pusing source {sourceRepo.Name}:{branch} to {destRepo.Name}:{branch} @ {destRepo.Url}");
+
+                            repo.Network.Push(destRemote, branch.CanonicalName, new PushOptions()
+                            {
+                                CredentialsProvider = destCredProvider
+                            });
+                        }
+
+                    }
                 }
             }
-
 
         }
 
